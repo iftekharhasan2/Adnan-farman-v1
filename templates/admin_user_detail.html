@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ user.name }} – Admin{% endblock %}
+{% block content %}
+
+{% set today = today or now.date().isoformat() %}   {# passed from view or fallback #}
+
+<h5>{{ user.name }} ({{ user.phone }})</h5>
+
+{% for p in projects %}
+  {% set days = p.days or 0 %}
+
+  <div class="card mb-4">
+    <div class="card-header">
+      {{ p.name }} ({{ p.type }}) – দিন {{ days }} – ওজন {{ p.weight }} কেজি
+    </div>
+
+    <div class="accordion accordion-flush" id="acc-{{ p._id }}">
+      {% for phase_dict in p.schedule %}
+        {% set phase = phase_dict.phase %}
+
+        {# daily dictionaries #}
+        {% set today_done   = p.task_done.get(today, {}) %}
+        {% set today_photos = p.task_photo.get(today, {}).get(phase, []) %}
+
+        <div class="accordion-item">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#phase-{{ p._id }}-{{ phase }}">
+              {{ phase|title }}
+            </button>
+          </h2>
+
+          <div id="phase-{{ p._id }}-{{ phase }}"
+               class="accordion-collapse collapse"
+               data-bs-parent="#acc-{{ p._id }}">
+            <div class="accordion-body p-0">
+
+              <!-- Tasks with daily completion -->
+              <ul class="list-group list-group-flush">
+                {% for t in phase_dict.tasks %}
+                  {% set key = phase + '.' + loop.index0|string %}
+                  {% set is_done = today_done.get(key, False) %}
+
+                  <li class="list-group-item d-flex justify-content-between align-items-center
+                             {{ 'list-group-item-success' if is_done else '' }}">
+                    <div>
+                      <div>{{ t.description }}</div>
+                      <small class="text-muted">{{ t.time_range }}</small>
+                    </div>
+                    <span class="badge bg-{{ 'success' if is_done else 'secondary' }}">
+                      {{ '✓' if is_done else '✗' }}
+                    </span>
+                  </li>
+                {% endfor %}
+              </ul>
+
+              <!-- Photos for today & this phase -->
+              {% if today_photos %}
+                <div class="p-2 border-top">
+                  <small class="text-muted">ছবি ({{ today_photos|length }}টি)</small>
+                  <div class="row g-1">
+                    {% for pic in today_photos %}
+                      <div class="col-3">
+                        <a href="{{ url_for('static', filename='uploads/' + pic) }}"
+                           data-lightbox="{{ today }}-{{ p._id }}-{{ phase }}">
+                          <img src="{{ url_for('static', filename='uploads/' + pic) }}"
+                               class="img-fluid rounded">
+                        </a>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% else %}
+  <div class="card text-center p-4">
+    <p class="text-muted">এই ব্যবহারকারীর কোন প্রকল্প নেই</p>
+  </div>
+{% endfor %}
+{% endblock %}
